@@ -1,0 +1,124 @@
+/** {
+	box-sizing: border-box;
+}
+*/
+body {
+	padding: 0;
+	margin: 0;
+/*	background-color: #31EF7E;*/
+	background-color: #f3f3f3;
+	font-family: 'Roboto', sans-serif;
+	font-size: 16px;
+	/*overflow: hidden;*/
+}
+
+button {
+	background: none;
+	border: none;
+}
+
+.stories-wrapper {
+  width: 100vw;
+  height: 100vh;
+  -webkit-perspective: 400px;
+  overflow: hidden;
+}
+
+.stories {
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform: translateZ(-50vw);
+  transition: transform 2s;
+}
+
+/* TEMP */
+.stories.rotate {
+	transform: translateZ(-50vw) rotateY(-90deg);
+}
+
+.story {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	backface-visibility: hidden;
+	overflow: hidden;
+	will-change: transform;
+}
+
+.story-1 {
+	transform: rotateY(0) translateZ(50vw);
+}
+
+.story-2 {
+	transform: rotateY(90deg) translateZ(50vw);
+}
+
+.story-3 {
+	transform: rotateY(180deg) translateZ(50vw);
+}
+
+.story__top {
+	z-index: 10;
+	position: absolute;
+	top: 0;
+	width: 100%;
+	height: 100px;
+	background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0));
+}
+
+.story__details {
+	display: flex;
+	align-items: center;
+	margin: 16px 0 0 16px;
+}
+
+.story__avatar {
+	width: 40px;
+	height: 40px;
+	margin-right: 8px;
+	background-color: white;
+	border-radius: 50%;
+}
+
+.story__user {
+	margin-right: 8px;
+	color: white;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+}
+
+.story__time {
+	color: white;
+	opacity: 0.5;
+	letter-spacing: 0.02em;
+}
+
+.story__bottom {
+	z-index: 10;
+	position: absolute;
+	bottom: 0;
+	width: 100%;
+}
+
+.story__send-button {
+	padding: 16px;
+	color: white;
+	font-size: 18px;
+}
+
+.story__video {
+	/* Make video to at least 100% wide and tall */
+	min-width: 100%;
+	min-height: 100%;
+
+	/* Setting width & height to auto prevents the browser from stretching or squishing the video */
+	width: auto;
+	height: auto;
+
+	/* Center the video */
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+}
+
