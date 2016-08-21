@@ -10,85 +10,35 @@
 </head>
 <body>
 
-
-
 <div class="stories-wrapper">
 	<section class="stories">
-		<article class="story story-1">
-			<div class="story__top">
-				<div class="story__details">
-					<div class="story__avatar"></div>
-					<div class="story__user">vegangumshoe</div>
-					<div class="story__time">12m</div>
-				</div>
-			</div>
-			<div class="story__bottom">
-				<button class="story__send-button">Send Message</button>
-			</div>
-			<video class="story__video" autoplay loop>
-				<source src="videos/citylife.mp4" type="video/mp4">
-			</video>
-		</article>
-		<article class="story story-2">
-			<div class="story__top">
-				<div class="story__details">
-					<div class="story__avatar"></div>
-					<div class="story__user">thedogindie</div>
-					<div class="story__time">3hr</div>
-				</div>
-			</div>
-			<div class="story__bottom">
-				<button class="story__send-button">Send Message</button>
-			</div>
-			<video class="story__video" autoplay loop>
-				<source src="videos/girlbythesea.mp4" type="video/mp4">
-			</video>
-		</article>
-		<div class="story story-3">Back</div>
 	</section>
 </div>
 
-	<!-- video tag optional attributes: autoplay, loop, muted -->
 
-<!-- 	<div class="stories-wrapper" style="display: none;">
+<script type="text/template" id="story-template">
+	<article class="story">
+		<div class="story__cover"></div>
+		<div class="story__top">
+			<div class="story__details">
+				<div class="story__avatar" style="background-image: url(/images/avatars/<%- user %>.jpg)"></div>
+				<div class="story__user"><%- user %></div>
+				<div class="story__time"><%- time %></div>
+			</div>
+		</div>
+		<div class="story__bottom">
+			<button class="story__send-button">Send Message</button>
+		</div>
+		<video class="story__video" autoplay loop muted poster="/images/avatars/thedogindie.jpg">
+			<source src="videos/<%- video %>.mp4" type="video/mp4">
+		</video>
+	</article>
+</script>
 
-		<section class="stories">
-			<article class="story story-1">
-				<div class="story__top">
-					<div class="story__details">
-						<div class="story__avatar"></div>
-						<div class="story__user">vegangumshoe</div>
-						<div class="story__time">12m</div>
-					</div>
-				</div>
-				<div class="story__bottom">
-					<button class="story__send-button">Send Message</button>
-				</div>
-				<video class="story__video" autoplay>
-					<source src="videos/citylife.mp4" type="video/mp4">
-				</video>
-			</article>
+<script type="text/javascript" src="node_modules/underscore/underscore.js"></script>
+<script type="text/javascript" src="node_modules/jquery/dist/jquery.js"></script>
+<script type="text/javascript" src="node_modules/jquery.event.ue/jquery.event.ue.js"></script>
+<script type="text/javascript" src="main.js"></script>
 
-			<article class="story story-2">
-				<div class="story__top">
-					<div class="story__details">
-						<div class="story__avatar"></div>
-						<div class="story__user">thedogindie</div>
-						<div class="story__time">2hr</div>
-					</div>
-				</div>
-				<div class="story__bottom">
-					<button class="story__send-button">Send Message</button>
-				</div>
-				<video class="story__video" autoplay>
-					<source src="videos/girlbythesea.mp4" type="video/mp4">
-				</video>
-			</article>
-		</section>
-
-	</div>
--->
-	<script type="text/javascript" src="node_modules/jquery/dist/jquery.js"></script>
-	<script type="text/javascript" src="main.js"></script>
 </body>
 </html>

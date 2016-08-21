@@ -1,172 +1,264 @@
-// TODO: On mobile, let user scroll vertically even if their starting press is on a card.
-// TODO: requestAnimationFrame, only when animation needed
-// TODO: Don't have Card class mess with out card els when swiped away. Trigger event and have Cards
-//       class handle.
+// # To-Dos
+// - [X] Attach mouse events to document
+// - [ ] Add IG feed in background
+// - [ ] Support clicking on image to go to prev or next
+// - [ ] Support tapping
+// - [ ] Start videos after they have been positioned
+// - [ ] if right side of video is clicked, go to next
+// - [ ] Only call update when something is being dragger or animated
+// - [ ] Shrink videos before sharing? Crop videos?
 
-class Card {
-	constructor(el) {
-		// The amount, as a percentage width of the card, the user must drag it to have it slide out
-		// one release.
-		this.minDragPercentToDiscard = 0.5;
+// Data
+let storiesData = [
+	{
+		user: 'lokesh',
+		time: '5min',
+		video: 'citylife'
+	},{
+		user: 'vegangumshoe',
+		time: '12m',
+		video: 'girlbythesea'
+	}, {
+		user: 'thedogindie',
+		time: '3hr',
+		video: 'diving'
+	}, {
+		user: 'juanarreguin',
+		time: '5hr',
+		video: 'photoshop'
+	}
+];
 
+// Templates
+const storyTemplate = _.template($('#story-template').html());
+
+// ---
+
+class Stories {
+	constructor(el, data) {
+		// // Currently a
+		// this.darkenStoriesAtAngle = false;
+
+		// The amount, as a percentage width of the story card, the user must drag it to have it
+		// slide to the next on release.
+		this.minDragPercentToTransition = 0.5;
+
+		// Bigger num creates a slower transition
+		this.transitionSpeed = 10;
+
+		// Convenience properties
 		this.el = el;
 		this.$el = $(el);
-
-		this.isDragging = false;
-		this.isAnimating = false;
-		this.hasArrivedAtSwipeAwayTarget = false;
-
-		this.clientRect = this.el.getBoundingClientRect();
-		this.width = this.clientRect.width;
-		this.outerHeightWithMargin = this.$el.outerHeight(true);
-
-		this.translateX = 0; // Tracks current translateX tranform value
-		this.targetX = 0;
-
-		this.dragStartX = 0;
-		this.dragCurrentX = 0;
-
-		this.addEventHandlers();
+		this.stories = data;
 	}
 
-	addEventHandlers() {
-		this.$el
-			.on('touchstart.swipe mousedown.swipe', this.onDragStart.bind(this))
-			.on('touchmove.swipe mousemove.swipe', this.onDragMove.bind(this))
-			.on('touchend.swipe mouseup.swipe', this.onDragEnd.bind(this));
+	render() {
+		let fragment = document.createDocumentFragment();
 
+		_.each(this.stories, (story, index) => {
+			$(storyTemplate(story))
+				.attr('id', 'story-' + index)
+				.appendTo(fragment);
+		})
+
+		this.$el.append(fragment);
+
+		// Document level event handling
+		this._addDocumentEventHandlers();
 	}
 
-	removeEventHandlers() {
-		this.$el.off('.swipe');
+	/*
+		Make story and its neighbors visible, hide the rest.
+	 */
+	show(index) {
+		// Update index which tracks currently shown story
+		this.index = index;
+
+		// Reset Stories transforms (container)
+		this.$el.css('transform', 'translateZ(-50vw)');
+
+
+		// Hide all stories
+		this.$el.find('.story').hide();
+
+		// Show and position the chosen story as well as its neighbors
+		for (let i = -1; i < 2; i++) {
+			let loopIndex = i + index;
+			let coverOpacity = Math.abs(i);
+
+			this.$el
+				.find('#story-' + loopIndex)
+					.find('.story__cover')
+						.css({
+							// 'will-change': 'opacity',
+							'opacity': coverOpacity
+						})
+						.end()
+					.css({
+						'will-change': 'transform',
+						'transform': `rotateY(${i * 90}deg) translateZ(50vw)`,
+					})
+					.show();
+		}
+
+		this._addStoryEventHandlers()
 	}
 
-	onDragStart(e) {
+	_addDocumentEventHandlers() {
+		$(document)
+			.on('touchstart.stories mousedown.stories', this._onDragStart.bind(this))
+			.on('touchmove.stories mousemove.stories', this._onDragMove.bind(this))
+			.on('touchend.stories mouseup.stories', this._onDragEnd.bind(this));
+	}
+
+	_removeDocumentEventHandlers() {
+		$(document).off('.stories');
+	}
+
+	_addStoryEventHandlers() {
+		this.$el.find('#story-' + this.index)
+			.on('utap.stories', this._onClick.bind(this));
+	}
+
+	_removeStoryEventHandlers() {
+		console.log('remove click event');
+		this.$el.find('.stories').off('.stories');
+	}
+
+	_onClick (e) {
+		this.isAnimating = true;
+		this._removeStoryEventHandlers()
+
+		// Clicking the left 33% of the image takes you back, the rest forwards.
+		if (e.px_start_x < window.innerWidth / 3) {
+			this.targetRotateY = 90;
+			this.targetDirection = 'back';
+		} else {
+			this.targetRotateY = -90;
+			this.targetDirection = 'forward';
+		}
+	}
+
+	_onDragStart(e) {
 		this.isDragging = true;
 		this.el.style.willChange = 'transform';
 
 		this.dragStartX = e.pageX || e.originalEvent.touches[0].pageX;
 		this.dragCurrentX = this.dragStartX;
-
-		e.preventDefault();
+		// should this.update() be called here instead of repeatedly on move?
 	}
 
-	onDragMove(e) {
- 		this.dragCurrentX = e.pageX || e.originalEvent.touches[0].pageX;
+	_onDragMove(e) {
+		this.dragCurrentX = e.pageX || e.originalEvent.touches[0].pageX;
+		// this.update();
 	}
 
-	onDragEnd(e) {
+	_onDragEnd(e) {
 		this.isDragging = false;
 		this.isAnimating = true;
+		this._removeStoryEventHandlers();
 
-		// Has the card been dragged far enough to the left or right to enable to the slide out
-		// animation. Otherwise, we'll be easing it back into the start position.
+		// Has the card been dragged far enough to the left or right to enable an animation to the
+		// previous of next card. If not, we ease it back into the start position.
+		//
+		// We use an adjusted viewport width to calculate the threshold. As the viewport gets larger
+		// than 320px, we shrink the viewport value used in the calcuation. This prevents the
+		// scenarios where the minDragPercent is 0.5 and actual viewport width is 2048px, requiring
+		// the user to drag over 2024px to trigger the card change animation.
 		let dragDistanceX = this.dragCurrentX - this.dragStartX;
-		let threshold = this.width * this.minDragPercentToDiscard;
+		let adjustedViewportWidth = ((window.innerWidth - 320) / 4) + 320;
+		let threshold = adjustedViewportWidth * this.minDragPercentToTransition;
 
-		if (Math.abs(dragDistanceX) > threshold) {
-			this.targetX = (dragDistanceX > 0) ? this.width * 1.25: -this.width * 1.25;
+		if (dragDistanceX > threshold) {
+			this.targetRotateY = 90;
+			this.targetDirection = 'back';
+		} else if (Math.abs(dragDistanceX) > threshold) {
+			this.targetRotateY = -90;
+			this.targetDirection = 'forward';
 		} else {
-			this.targetX = 0;
+			this.targetRotateY = 0;
 		}
 	}
 
 	update() {
-		let updateCSSAfterUpdating = (this.isDragging || this.isAnimating);
+		let setCSSAfterUpdating = (this.isDragging || this.isAnimating);
 
 		if (this.isDragging) {
-			this.translateX = this.dragCurrentX - this.dragStartX;
+			let dragDistanceX = this.dragCurrentX - this.dragStartX;
+			this.rotateY = (dragDistanceX / window.innerWidth)  * 90;
 		}
 
 		if (this.isAnimating) {
-			this.translateX += (this.targetX - this.translateX) / 4;
+			// Simple easing
+			this.rotateY += (this.targetRotateY - this.rotateY) / this.transitionSpeed;
 
-			// If card has nearly reached its target, bump it to final spot and stop animating.
-			if (Math.abs(this.translateX - this.targetX) < 1) {
-				this.translateX = this.targetX;
+			// If story has nearly reached its target, bump it to final spot and stop animating.
+			if (Math.abs(this.rotateY - this.targetRotateY) < 0.5) {
+				this.rotateY = this.targetRotateY;
 				this.el.style.willChange = 'initial';
 
 				this.isAnimating = false;
 
 				// If card has finished animating out of screen
-				if (this.targetX !== 0 ) {
-					this.hasArrivedAtSwipeAwayTarget = true;
+				if (this.targetRotateY !== 0 ) {
+					this.hasArrivedAtFinalDest = true;
 				}
 			}
-
 		}
 
-		if (updateCSSAfterUpdating) {
-			this.$el.css({
-				'transform': `translateX(${this.translateX}px)`,
-				'opacity': (this.width - Math.abs(this.translateX)) / this.width
-			});
+		if (setCSSAfterUpdating) {
+			this.$el.css('transform', `translateZ(-50vw) rotateY(${this.rotateY}deg)`)
+
+			// Freater rotateY, more opacity for prev.
+			// Smaller rotate, more opacity for next.
+			let prevStoryOpacity = ((90 - this.rotateY) / 90);
+			let nextStoryOpacity = ((90 - Math.abs(this.rotateY)) / 90)
+
+			let prevIndex = this.index - 1;
+			let nextIndex = this.index + 1;
+
+			this.$el
+				.find('#story-' + prevIndex)
+					.find('.story__cover')
+						.css('opacity', prevStoryOpacity);
+
+			this.$el
+				.find('#story-' + nextIndex)
+					.find('.story__cover')
+						.css('opacity', nextStoryOpacity);
 		}
 
-		if (this.hasArrivedAtSwipeAwayTarget) {
-			let $cards = $('.card');
-			let cardIndex = $cards.index(this.$el);
-			let $cardsAfterSwiped = $cards.slice(cardIndex);
-
-			let self = this;
-
-			$cardsAfterSwiped.each(function(i) {
-				this.style.willChange = 'transform';
-				$(this).css('transform', `translateY(${self.outerHeightWithMargin}px)`);
-				this.addEventListener('transitionend', self.onTransitionComplete.bind(this));
-			})
-
-   			requestAnimationFrame(function() {
-				$cardsAfterSwiped.each(function(i) {
-					$(this).css({
-						'transform': '',
-						'transition': 'transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1)'
-					});
-				})
-		    });
-
-			this.hasArrivedAtSwipeAwayTarget = false;
-			this.destroy();
+		if (this.hasArrivedAtFinalDest) {
+			let newIndex = (this.targetDirection === 'forward') ? this.index + 1: this.index -1;
+			this.show(newIndex);
+			this.hasArrivedAtFinalDest = false;
 		}
-
 	}
 
-	onTransitionComplete() {
-		$(this).css('transition', '');
-   	}
-
 	destroy() {
+		this._removeStoryEventHandlers();
+		this._removeDocumentEventHandlers();
 		this.el.remove()
 		delete this;
 	}
+
 }
 
 
-let cards = [];
+// Init
 
-function updateCards() {
-	// for (let card of cards) {
-	// 	card.update();
-	// }
-	// requestAnimationFrame(updateCards);
+let stories = new Stories(document.querySelector('.stories'), storiesData);
+stories.render();
+stories.show(0);
+
+function updateStories() {
+	stories.update();
+	requestAnimationFrame(updateStories);
 }
 
-$(function() {
-	$('.stories').on('click', function(e) {
-		$(this).toggleClass('rotate');
-	})
+updateStories();
 
-	// $('.story__video').on('click', function(e) {
-	// 	if (this.paused) {
-	// 		this.play();
-	// 	} else {
-	// 		this.pause();
-	// 	}
-	// })
-
-	// $('.card').each(function() {
-	// 	cards.push(new Card(this));
-	// })
-
-	// requestAnimationFrame(updateCards);
-})
+// Prevent bouncy iOS scrolling in mobile safari
+document.body.addEventListener('touchmove', (event) => {
+	event.preventDefault();
+}, false);
