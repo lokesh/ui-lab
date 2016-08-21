@@ -1,18 +1,33 @@
+// Instagram Stories Web Prototype
+// by Lokesh Dhakar - lokeshdhakar.com
+// -----------------------------------
+
 // # To-Dos
 // - [X] Attach mouse events to document
 // - [X] If first or last vid, add tension. Drag 25% the normal distance.
 // - [X] Check drag velocity to determine intent of direction.
-// - [ ] Add IG feed in background
+// - [X] Add IG feed in background
+// - [X] Fade and scale out to IG page.
 // - [X] Support clicking on image to go to prev or next
 // - [X] Support tapping
-// - [ ] Start videos after they have been positioned
+// - [X] Don't show IG page in bg till user is about to go back
+// - [X] Bug: You can't quickly swipe between items. Fixed, good enough.
+// - [ ] Ability to reopen after closing.
+// - [ ] Show images on mobile?
+// - [ ] Start videos after they have been positioned?
 // - [ ] Shrink videos before sharing? Crop videos?
-// - [ ] Bug: You can't quickly swipe between items.
 
-// Nice-to-haves
+
+// # Nice-to-haves
 // - [ ] If tapping left of first or right of last, don't do rotation, just animate down.
 // - [X] Only call update when something is being dragger or animated
-// - [ ] Play videos in canvas on mobile or use animated gifs.
+// - [ ] Play videos in canvas on mobile or use animated gifs. Canvas technique unlikely to be
+//       performant on mobile devices.
+
+// # Skipping
+// - Imlement slide up and down gestures and their respective actions
+// - Have avatar image in story keep scale and animate towards avatar on feed page when closing.
+
 
 // Data
 let storiesData = [
@@ -32,13 +47,42 @@ let storiesData = [
 		user: 'juanarreguin',
 		time: '5hr',
 		video: 'photoshop'
+	}, {
+		user: 'nspady',
+		time: '12hr',
+		video: 'statefair'
 	}
 ];
 
 // Templates
-const storyTemplate = _.template($('#story-template').html());
+const storyBarAvatarTemplate = _.template($('#story-bar-avatar-template').html());
+const storyTemplate          = _.template($('#story-template').html());
+
+// Elements
+let $feedCover = $('.feed__cover');
+let $storyBar = $('.story-bar');
+let $storyBarUsers = $('.story-bar__user');
 
 // Classes
+class StoryBar {
+	constructor(el, data) {
+		this.el = el;
+		this.$el = $(el);
+		this.data = data;
+	}
+
+	render() {
+		let fragment = document.createDocumentFragment();
+
+		_.each(this.data, (story, index) => {
+			story = Object.assign(story, {'index': index});
+			$(storyBarAvatarTemplate(story))
+				.appendTo(fragment);
+		})
+		this.$el.append(fragment);
+	}
+}
+
 class Stories {
 	constructor(el, data) {
 		// The amount, as a percentage width of the story card, the user must drag it to have it
@@ -49,7 +93,7 @@ class Stories {
 		this.minVelocityToTransition = 0.65;
 
 		// Bigger num creates a slower transition
-		this.transitionSpeed = 10;
+		this.transitionSpeed = 6;
 
 		// Init
 		this.rotateY = 0;
@@ -65,9 +109,8 @@ class Stories {
 		let fragment = document.createDocumentFragment();
 
 		_.each(this.stories, (story, index) => {
-			$(storyTemplate(story))
-				.attr('id', 'story-' + index)
-				.appendTo(fragment);
+			story = Object.assign(story, {'index': index});
+			$(storyTemplate(story)).appendTo(fragment);
 		})
 
 		this.$el.append(fragment);
@@ -99,7 +142,7 @@ class Stories {
 				.find('#story-' + loopIndex)
 					.find('.story__cover')
 						.css({
-							// 'will-change': 'opacity',
+							'will-change': 'opacity',
 							'opacity': coverOpacity
 						})
 						.end()
@@ -111,8 +154,41 @@ class Stories {
 		}
 	}
 
-	hide() {
-		console.log(hide);
+	open() {
+		console.log('open');
+	}
+
+	close() {
+		let $story = this.$el.find('#story-' + this.index);
+
+		this._removeEventHandlers();
+		this.pauseVideos();
+
+		// Hide all stories but the current
+		this.$el.find('.story').hide();
+		$story.show()
+
+		//
+		let $storyBarUser = $storyBar.find(`[data-story-id=${this.index}]`);
+		let storyBarUserRect = $storyBarUser[0].getBoundingClientRect();
+
+		// Reset 3d transforms and scale down.
+		$story.attr('style', '');
+		this.$el.attr('style', `transform-origin: ${storyBarUserRect.left + 12}px ${storyBarUserRect.top + 24}px; transform: translateZ(0) scale(0.1)`);
+		this.$el.addClass('is-closed');
+		$storyBarUser.addClass('bounce');
+
+		// Fade in feed page
+		$feedCover
+			.attr('style', '')
+			.addClass('is-hidden');
+
+	}
+
+	pauseVideos() {
+		this.$el.find('.story__video').each(function() {
+			this.pause();
+		});
 	}
 
 	_addEventHandlers() {
@@ -128,17 +204,28 @@ class Stories {
 	}
 
 	_onTap (e) {
-		if (this.isAnimating) { return; }
+		if (this.isRotating) { return; }
 
-		this.isAnimating = true;
+		this.isRotating = true;
 
 		// // Clicking the left 33% of the image takes you back, the rest forwards.
 		if (e.px_start_x < window.innerWidth / 3) {
-			this.targetRotateY = 90;
-			this.targetDirection = 'back';
+			// If going back from first card, close
+			if (this.index === 0) {
+				this.isOpeningOrClosing = true;
+				this.close();
+			} else {
+				this.targetRotateY = 90;
+				this.targetDirection = 'back';
+			}
 		} else {
-			this.targetRotateY = -90;
-			this.targetDirection = 'forward';
+			if ((this.index + 1) === this.count) {
+				this.isOpeningOrClosing = true;
+				this.close();
+			} else {
+				this.targetRotateY = -90;
+				this.targetDirection = 'forward';
+			}
 		}
 
 		this.update();
@@ -157,12 +244,10 @@ class Stories {
 
 	_onDragMove(e) {
 		this.dragCurrentX = e.px_current_x;
-		// this.update();
 	}
 
 	_onDragEnd(e) {
 		this.isDragging = false;
-		this.isAnimating = true;
 
 		// Did the user show intent to go to a different card? We check in two ways:
 		// 1. Has the card been dragged far to one side?
@@ -182,22 +267,36 @@ class Stories {
 		let velocity = e.px_tdelta_x / e.ms_elapsed;
 
 		if (dragDeltaX > threshold || velocity < (-1 * this.minVelocityToTransition)) {
-			this.targetRotateY = 90;
-			this.targetDirection = 'back';
+			// If going back from first card, close
+			if (this.index === 0) {
+				this.isOpeningOrClosing = true;
+				this.close();
+			} else {
+				this.targetRotateY = 90;
+				this.targetDirection = 'back';
+				this.isRotating = true;
+			}
 		} else if (Math.abs(dragDeltaX) > threshold || velocity > this.minVelocityToTransition) {
-			this.targetRotateY = -90;
-			this.targetDirection = 'forward';
+			if ((this.index + 1) === this.count) {
+				this.isOpeningOrClosing = true;
+				this.close();
+			} else {
+				this.targetRotateY = -90;
+				this.targetDirection = 'forward';
+				this.isRotating = true;
+			}
 		} else {
 			this.targetRotateY = 0;
+			this.isRotating = true;
 		}
 	}
 
 	update() {
 		// Update calls itself at the end and loop. We break the loop once dragging and animations
-		// are both complete.
-		if (!this.isDragging && !this.isAnimating) { return; }
+		// are both complete or we are opening/closing.
+		if (this.isOpeningOrClosing || (!this.isDragging && !this.isRotating)) { return; }
 
-		let setCSSAfterUpdating = (this.isDragging || this.isAnimating);
+		let setCSSAfterUpdating = (this.isDragging || this.isRotating);
 
 		if (this.isDragging) {
 			let dragDeltaX = this.dragCurrentX - this.dragStartX;
@@ -206,13 +305,15 @@ class Stories {
 			// If on last card and draggin forward, add resistance.
 			if (((this.index === 0) && (dragDeltaX > 0)) ||
 				((this.index + 1 === this.count) && (dragDeltaX < 0))) {
-				this.rotateY = (dragDeltaX / window.innerWidth)  * 20;
+				this.rotateY = (dragDeltaX / window.innerWidth)  * 30;
+				let opacity = ((90 - Math.abs(this.rotateY)) / 90);
+				$feedCover.css('opacity', opacity);
 			} else {
 				this.rotateY = (dragDeltaX / window.innerWidth)  * 90;
 			}
 		}
 
-		if (this.isAnimating) {
+		if (this.isRotating) {
 			// Simple easing
 			this.rotateY += (this.targetRotateY - this.rotateY) / this.transitionSpeed;
 
@@ -220,7 +321,7 @@ class Stories {
 			if (Math.abs(this.rotateY - this.targetRotateY) < 0.5) {
 				this.rotateY = this.targetRotateY;
 				this.el.style.willChange = 'initial';
-				this.isAnimating = false;
+				this.isRotating = false;
 
 				if (this.targetDirection) {
 					this.isSwitchingStories = true;
@@ -233,21 +334,14 @@ class Stories {
 
 			// Freater rotateY, more opacity for prev.
 			// Smaller rotate, more opacity for next.
-			let prevStoryOpacity = ((90 - this.rotateY) / 90);
-			let nextStoryOpacity = ((90 - Math.abs(this.rotateY)) / 90)
-
+			let opacity = ((90 - Math.abs(this.rotateY)) / 90)
 			let prevIndex = this.index - 1;
 			let nextIndex = this.index + 1;
 
 			this.$el
-				.find('#story-' + prevIndex)
-					.find('.story__cover')
-						.css('opacity', prevStoryOpacity);
-
-			this.$el
-				.find('#story-' + nextIndex)
-					.find('.story__cover')
-						.css('opacity', nextStoryOpacity);
+				.find('#story-' + prevIndex + ' .story__cover')
+				.add('#story-' + nextIndex + ' .story__cover')
+				.css('opacity', opacity);
 		}
 
 		if (this.isSwitchingStories) {
@@ -267,13 +361,51 @@ class Stories {
 }
 
 
+// ------------
 // Init
+// ------------
+
+// Prevent bouncy iOS scrolling in mobile safari
+// document.body.addEventListener('touchmove', (event) => {
+// 	event.preventDefault();
+// }, false);
+
+let storyBar = new StoryBar(document.querySelector('.story-bar'), storiesData)
+storyBar.render();
 
 let stories = new Stories(document.querySelector('.stories'), storiesData);
 stories.render();
 stories.show(0);
 
-// Prevent bouncy iOS scrolling in mobile safari
-document.body.addEventListener('touchmove', (event) => {
-	event.preventDefault();
-}, false);
+// $('body').on('click', (event) => {
+// 	console.log('body click');
+// })
+
+// debugger;
+
+// $('.feed').on('click', (event) => {
+// 	console.log('feed click');
+// })
+
+
+
+// $storyBar.on('utap', function() {
+// 	console.log('div click');
+// })
+// $storyBar.on('utap.stories', '.story-bar__user', (event) => {
+// 	console.log('click');
+// })
+
+// $(document).on('utap.stories', '.feed', function() {
+// 	console.log('feed click');
+// });
+
+
+
+// $(document).on('utap.stories', '.story-bar__user', function() {
+// 	console.log('story click');
+// });
+
+// $(document).on('utap.stories', this._onTap.bind(this))
+
+// debugger;
