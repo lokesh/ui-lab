@@ -5,33 +5,34 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 // Instagram Stories Web Prototype
-// by Lokesh Dhakar - lokeshdhakar.com
+// by Lokesh Dhakar - twitter.com/lokesh
 // -----------------------------------
 
 // # To-Dos
 // - [X] Attach mouse events to document
 // - [X] If first or last vid, add tension. Drag 25% the normal distance.
 // - [X] Check drag velocity to determine intent of direction.
-// - [X] Add IG feed in background
+// - [X] Add feed page in background
 // - [X] Fade and scale out to IG page.
 // - [X] Support clicking on image to go to prev or next
 // - [X] Support tapping
 // - [X] Don't show IG page in bg till user is about to go back
 // - [X] Bug: You can't quickly swipe between items. Fixed, good enough.
 // - [ ] Ability to reopen after closing.
-// - [ ] Show images on mobile?
+// - [X] Show images on mobile? Probabl better to use the video poster.
 // - [ ] Start videos after they have been positioned?
 // - [ ] Shrink videos before sharing? Crop videos?
 
 // # Nice-to-haves
-// - [ ] If tapping left of first or right of last, don't do rotation, just animate down.
+// - [X] If tapping left of first or right of last, don't do rotation, just animate down.
 // - [X] Only call update when something is being dragger or animated
 // - [ ] Play videos in canvas on mobile or use animated gifs. Canvas technique unlikely to be
 //       performant on mobile devices.
 
 // # Skipping
-// - Imlement slide up and down gestures and their respective actions
+// - Implement slide up and down gestures and their respective actions
 // - Have avatar image in story keep scale and animate towards avatar on feed page when closing.
+// - Add loaders.
 
 // Data
 var storiesData = [{
@@ -55,6 +56,8 @@ var storiesData = [{
 	time: '12hr',
 	video: 'statefair'
 }];
+
+var isIOS = /iPad|iPhone|iPod/.test(navigator.platform);
 
 // Templates
 var storyBarAvatarTemplate = _.template($('#story-bar-avatar-template').html());
@@ -122,7 +125,10 @@ var Stories = function () {
 			var fragment = document.createDocumentFragment();
 
 			_.each(this.stories, function (story, index) {
-				story = Object.assign(story, { 'index': index });
+				story = Object.assign(story, {
+					'index': index,
+					'isIOS': isIOS
+				});
 				$(storyTemplate(story)).appendTo(fragment);
 			});
 
@@ -216,7 +222,6 @@ var Stories = function () {
 			if (this.isRotating) {
 				return;
 			}
-
 			this.isRotating = true;
 
 			// // Clicking the left 33% of the image takes you back, the rest forwards.
@@ -385,6 +390,16 @@ var Stories = function () {
 // 	event.preventDefault();
 // }, false);
 
+var thumbsUpShown = false;
+if (window.innerWidth >= 1000) {
+	$(window).on('resize.stories', function () {
+		if (window.innerWidth <= 420) {
+			$('.success-message').addClass('is-in');
+			$(window).off('resize.stories');
+		}
+	});
+}
+
 var storyBar = new StoryBar(document.querySelector('.story-bar'), storiesData);
 storyBar.render();
 
@@ -392,31 +407,6 @@ var stories = new Stories(document.querySelector('.stories'), storiesData);
 stories.render();
 stories.show(0);
 
-// $('body').on('click', (event) => {
-// 	console.log('body click');
-// })
-
-// debugger;
-
-// $('.feed').on('click', (event) => {
-// 	console.log('feed click');
-// })
-
-// $storyBar.on('utap', function() {
-// 	console.log('div click');
-// })
-// $storyBar.on('utap.stories', '.story-bar__user', (event) => {
-// 	console.log('click');
-// })
-
-// $(document).on('utap.stories', '.feed', function() {
-// 	console.log('feed click');
-// });
-
-// $(document).on('utap.stories', '.story-bar__user', function() {
-// 	console.log('story click');
-// });
-
-// $(document).on('utap.stories', this._onTap.bind(this))
-
-// debugger;
+if (isIOS) {
+	$('body').addClass('ios');
+}
