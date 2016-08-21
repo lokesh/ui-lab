@@ -116,3 +116,17 @@ button {
 	transform: translateX(-50%);
 }
 
+
+/* Feed */
+
+.feed {
+	position: absolute;
+	z-index: -1;
+	top: 0;
+	left: 0;
+	background-color: yellow;
+	font-size: 48px;
+	width: 100%;
+	height: 100%;
+	scroll-y: auto;
+}

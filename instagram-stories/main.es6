@@ -1,12 +1,18 @@
 // # To-Dos
 // - [X] Attach mouse events to document
+// - [X] If first or last vid, add tension. Drag 25% the normal distance.
+// - [X] Check drag velocity to determine intent of direction.
 // - [ ] Add IG feed in background
-// - [ ] Support clicking on image to go to prev or next
-// - [ ] Support tapping
+// - [X] Support clicking on image to go to prev or next
+// - [X] Support tapping
 // - [ ] Start videos after they have been positioned
-// - [ ] if right side of video is clicked, go to next
-// - [ ] Only call update when something is being dragger or animated
 // - [ ] Shrink videos before sharing? Crop videos?
+// - [ ] Bug: You can't quickly swipe between items.
+
+// Nice-to-haves
+// - [ ] If tapping left of first or right of last, don't do rotation, just animate down.
+// - [X] Only call update when something is being dragger or animated
+// - [ ] Play videos in canvas on mobile or use animated gifs.
 
 // Data
 let storiesData = [
@@ -32,24 +38,27 @@ let storiesData = [
 // Templates
 const storyTemplate = _.template($('#story-template').html());
 
-// ---
-
+// Classes
 class Stories {
 	constructor(el, data) {
-		// // Currently a
-		// this.darkenStoriesAtAngle = false;
-
 		// The amount, as a percentage width of the story card, the user must drag it to have it
 		// slide to the next on release.
 		this.minDragPercentToTransition = 0.5;
 
+		// The number of pixels a MS horizontally the user is required to drag to set off this trigger.
+		this.minVelocityToTransition = 0.65;
+
 		// Bigger num creates a slower transition
 		this.transitionSpeed = 10;
+
+		// Init
+		this.rotateY = 0;
 
 		// Convenience properties
 		this.el = el;
 		this.$el = $(el);
 		this.stories = data;
+		this.count = this.stories.length;
 	}
 
 	render() {
@@ -64,7 +73,7 @@ class Stories {
 		this.$el.append(fragment);
 
 		// Document level event handling
-		this._addDocumentEventHandlers();
+		this._addEventHandlers();
 	}
 
 	/*
@@ -76,7 +85,7 @@ class Stories {
 
 		// Reset Stories transforms (container)
 		this.$el.css('transform', 'translateZ(-50vw)');
-
+		this.rotateY = 0;
 
 		// Hide all stories
 		this.$el.find('.story').hide();
@@ -100,36 +109,30 @@ class Stories {
 					})
 					.show();
 		}
-
-		this._addStoryEventHandlers()
 	}
 
-	_addDocumentEventHandlers() {
+	hide() {
+		console.log(hide);
+	}
+
+	_addEventHandlers() {
 		$(document)
-			.on('touchstart.stories mousedown.stories', this._onDragStart.bind(this))
-			.on('touchmove.stories mousemove.stories', this._onDragMove.bind(this))
-			.on('touchend.stories mouseup.stories', this._onDragEnd.bind(this));
+			.on('utap.stories', this._onTap.bind(this))
+			.on('udragstart.stories', this._onDragStart.bind(this))
+			.on('udragmove.stories', this._onDragMove.bind(this))
+			.on('udragend.stories', this._onDragEnd.bind(this));
 	}
 
-	_removeDocumentEventHandlers() {
+	_removeEventHandlers() {
 		$(document).off('.stories');
 	}
 
-	_addStoryEventHandlers() {
-		this.$el.find('#story-' + this.index)
-			.on('utap.stories', this._onClick.bind(this));
-	}
+	_onTap (e) {
+		if (this.isAnimating) { return; }
 
-	_removeStoryEventHandlers() {
-		console.log('remove click event');
-		this.$el.find('.stories').off('.stories');
-	}
-
-	_onClick (e) {
 		this.isAnimating = true;
-		this._removeStoryEventHandlers()
 
-		// Clicking the left 33% of the image takes you back, the rest forwards.
+		// // Clicking the left 33% of the image takes you back, the rest forwards.
 		if (e.px_start_x < window.innerWidth / 3) {
 			this.targetRotateY = 90;
 			this.targetDirection = 'back';
@@ -137,42 +140,51 @@ class Stories {
 			this.targetRotateY = -90;
 			this.targetDirection = 'forward';
 		}
+
+		this.update();
 	}
 
 	_onDragStart(e) {
+		this.targetDirection = null;
 		this.isDragging = true;
 		this.el.style.willChange = 'transform';
 
-		this.dragStartX = e.pageX || e.originalEvent.touches[0].pageX;
+		this.dragStartX = e.px_start_x;
 		this.dragCurrentX = this.dragStartX;
-		// should this.update() be called here instead of repeatedly on move?
+
+		this.update();
 	}
 
 	_onDragMove(e) {
-		this.dragCurrentX = e.pageX || e.originalEvent.touches[0].pageX;
+		this.dragCurrentX = e.px_current_x;
 		// this.update();
 	}
 
 	_onDragEnd(e) {
 		this.isDragging = false;
 		this.isAnimating = true;
-		this._removeStoryEventHandlers();
 
-		// Has the card been dragged far enough to the left or right to enable an animation to the
-		// previous of next card. If not, we ease it back into the start position.
-		//
-		// We use an adjusted viewport width to calculate the threshold. As the viewport gets larger
-		// than 320px, we shrink the viewport value used in the calcuation. This prevents the
-		// scenarios where the minDragPercent is 0.5 and actual viewport width is 2048px, requiring
-		// the user to drag over 2024px to trigger the card change animation.
-		let dragDistanceX = this.dragCurrentX - this.dragStartX;
+		// Did the user show intent to go to a different card? We check in two ways:
+		// 1. Has the card been dragged far to one side?
+		// 2. Did the drag velocity imply movement to one side?
+
+		// Note: We use an adjusted viewport width to calculate the drag to side threshold. As the
+		// viewport gets larger than 320px, we shrink the viewport value used in the calcuation.
+		// This prevents scenarios such as when the minDragPercent is 0.5 and actual viewport width
+		// is 2048px, requiring the user to drag over 1024px to trigger the card change.
+
+		// 1.
+		let dragDeltaX = -e.px_tdelta_x;
 		let adjustedViewportWidth = ((window.innerWidth - 320) / 4) + 320;
 		let threshold = adjustedViewportWidth * this.minDragPercentToTransition;
 
-		if (dragDistanceX > threshold) {
+		// 2.
+		let velocity = e.px_tdelta_x / e.ms_elapsed;
+
+		if (dragDeltaX > threshold || velocity < (-1 * this.minVelocityToTransition)) {
 			this.targetRotateY = 90;
 			this.targetDirection = 'back';
-		} else if (Math.abs(dragDistanceX) > threshold) {
+		} else if (Math.abs(dragDeltaX) > threshold || velocity > this.minVelocityToTransition) {
 			this.targetRotateY = -90;
 			this.targetDirection = 'forward';
 		} else {
@@ -181,11 +193,23 @@ class Stories {
 	}
 
 	update() {
+		// Update calls itself at the end and loop. We break the loop once dragging and animations
+		// are both complete.
+		if (!this.isDragging && !this.isAnimating) { return; }
+
 		let setCSSAfterUpdating = (this.isDragging || this.isAnimating);
 
 		if (this.isDragging) {
-			let dragDistanceX = this.dragCurrentX - this.dragStartX;
-			this.rotateY = (dragDistanceX / window.innerWidth)  * 90;
+			let dragDeltaX = this.dragCurrentX - this.dragStartX;
+
+			// If on first card and dragging back OR
+			// If on last card and draggin forward, add resistance.
+			if (((this.index === 0) && (dragDeltaX > 0)) ||
+				((this.index + 1 === this.count) && (dragDeltaX < 0))) {
+				this.rotateY = (dragDeltaX / window.innerWidth)  * 20;
+			} else {
+				this.rotateY = (dragDeltaX / window.innerWidth)  * 90;
+			}
 		}
 
 		if (this.isAnimating) {
@@ -196,12 +220,10 @@ class Stories {
 			if (Math.abs(this.rotateY - this.targetRotateY) < 0.5) {
 				this.rotateY = this.targetRotateY;
 				this.el.style.willChange = 'initial';
-
 				this.isAnimating = false;
 
-				// If card has finished animating out of screen
-				if (this.targetRotateY !== 0 ) {
-					this.hasArrivedAtFinalDest = true;
+				if (this.targetDirection) {
+					this.isSwitchingStories = true;
 				}
 			}
 		}
@@ -228,16 +250,16 @@ class Stories {
 						.css('opacity', nextStoryOpacity);
 		}
 
-		if (this.hasArrivedAtFinalDest) {
+		if (this.isSwitchingStories) {
 			let newIndex = (this.targetDirection === 'forward') ? this.index + 1: this.index -1;
 			this.show(newIndex);
-			this.hasArrivedAtFinalDest = false;
+			this.isSwitchingStories = false;
 		}
+		requestAnimationFrame(this.update.bind(this));
 	}
 
 	destroy() {
-		this._removeStoryEventHandlers();
-		this._removeDocumentEventHandlers();
+		this._removeEventHandlers();
 		this.el.remove()
 		delete this;
 	}
@@ -250,13 +272,6 @@ class Stories {
 let stories = new Stories(document.querySelector('.stories'), storiesData);
 stories.render();
 stories.show(0);
-
-function updateStories() {
-	stories.update();
-	requestAnimationFrame(updateStories);
-}
-
-updateStories();
 
 // Prevent bouncy iOS scrolling in mobile safari
 document.body.addEventListener('touchmove', (event) => {
