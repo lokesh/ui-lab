@@ -337,7 +337,7 @@ class Stories {
 		if (setCSSAfterUpdating) {
 			this.$el.css('transform', `translateZ(-50vw) rotateY(${this.rotateY}deg)`)
 
-			// Freater rotateY, more opacity for prev.
+			// Greater rotateY, more opacity for prev.
 			// Smaller rotate, more opacity for next.
 			let opacity = ((90 - Math.abs(this.rotateY)) / 90)
 			let prevIndex = this.index - 1;
