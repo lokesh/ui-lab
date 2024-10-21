@@ -10,7 +10,9 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@motionone/dom": "^10.18.0",
     "nuxt": "^3.13.2",
+    "three": "^0.169.0",
     "vue": "latest",
     "vue-router": "latest"
   }

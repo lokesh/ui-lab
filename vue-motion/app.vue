@@ -13,19 +13,14 @@ const forceRefresh = () => {
 const toggleModal = () => {
   isModalOpen.value = !isModalOpen.value;
 }
+
+const log = (e: any) => {
+  console.log(e.type);
+}
 </script>
 
 <template>
   <div class="controls">
-    <pre>
-      Todo:
-      - [ ] Modal in and out
-      - [ ] Staggered list
-    </pre>
-    <pre>
-      Notes:
-      :transition="{ duration: 1, repeat: 0 }"
-    </pre>
     <div class="button-row">
       <button @click="forceRefresh">Refresh</button>
       <button @click="toggleModal">Toggle Modal</button>
@@ -55,16 +50,29 @@ const toggleModal = () => {
     </Presence>
   </div>
   <div class="row">
-    <Motion class="box" :hover="{ scale: 0.8 }">
+    <PresenceGroup :exitBeforeEnter="false" :initial="true">
+  <template v-for="item, index in [1, 2, 3, 4]" :key="item.id">
+    <Motion
+    class="box"
+    :initial="{ opacity: 0 }"
+    :animate="{ opacity: 1 }"
+    :transition="{ delay: index * 0.5 }"
+      :exit="{ opacity: 0 }">
+    </Motion>
+  </template>
+</PresenceGroup>
+  </div>
+  <div class="row">
+    <Motion class="box" :hover="{ scale: 1.2 }">
       Hover
     </Motion>
-    <Motion class="box" :press="{ scale: 0.8 }">
+    <Motion class="box" :press="{ scale: 0.9 }">
       Press
     </Motion>
     <Motion
       class="box"
       :press="{
-      scale: [1, 1.5, 1],
+       scale: [1, 1.5, 1],
         rotate: [0, 180, 360],
       }"
       :transition="{
@@ -76,10 +84,33 @@ const toggleModal = () => {
     >
       Press & hold
     </Motion>
+    <SpringMouse class="box" />
   </div>
   <div class="row">
-    ...
+    <Motion class="box"
+      :initial="{ scale: 0.8 }"
+      :in-view="{ scale: 1 }"
+    >
+      In view
+    </Motion>
+    <Motion
+      class="box"
+      :initial="{ opacity: 0, scale: 0.8 }"
+      :hover="{ scale: 1.2 }"
+      :press="{ scale: 0.9 }"
+      :in-view="{ scale: 1, opacity: 1 }"
+      :transition="{ duration: 1 }"
+      @hoverstart="log"
+      @hoverend="log"
+      @pressstart="log"
+      @pressend="log"
+      @viewenter="log"
+      @viewleave="log"
+      @motioncomplete="log"
+      @motionstart="log"
+    >Logger</Motion>
   </div>
+
 </template>
 
 <style scoped>
