@@ -1,0 +1,1 @@
+export { default } from "file:///Users/lokesh/Projects/ui-prototypes/vue-motion/node_modules/@nuxt/vite-builder/dist/runtime/client.manifest.mjs"
