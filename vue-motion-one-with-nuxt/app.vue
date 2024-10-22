@@ -58,6 +58,7 @@ const log = (e: any) => {
     :animate="{ opacity: 1 }"
     :transition="{ delay: index * 0.5 }"
       :exit="{ opacity: 0 }">
+      Item {{ index }}
     </Motion>
   </template>
 </PresenceGroup>
