@@ -1,6 +1,17 @@
 {
+  "name": "ui-lab",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "live-server animejs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "@oku-ui/motion": "^0.3.4",
-    "@oku-ui/motion-nuxt": "^0.2.1"
+    "@oku-ui/motion-nuxt": "^0.2.1",
+    "animejs": "^3.2.2"
   }
 }

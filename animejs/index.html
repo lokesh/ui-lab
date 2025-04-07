@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime.js Demo</title>
+    <style>
+      body {
+        font-family: menlo, monospace;
+        font-size: 11px;
+      }
+        /* 
+         * Basic styling for the logo
+         * Best Practice: Use CSS for static styles and let Anime.js handle animations
+         * This separation makes the code more maintainable and performant
+         */
+        .logo {
+            width: 100px;
+            height: 100px;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <!-- 
+     * Container for the logo
+     * Best Practice: Use semantic class names that describe the content rather than the style
+     * This makes the code more maintainable and easier to understand
+     -->
+    <div class="large centered row">
+        <!-- 
+         * SVG logo with JavaScript class for targeting
+         * Best Practice: Use preserveAspectRatio to maintain aspect ratio during animations
+         * The viewBox attribute ensures the SVG scales properly
+         -->
+        <svg class="logo js" preserveAspectRatio="xMidYMid meet" viewBox="0 0 630 630">
+            <path fill="currentColor" d="M577,0 C606.271092,0 630,23.7289083 630,53 L630,577 C630,606.271092 606.271092,630 577,630 L53,630 C23.7289083,630 0,606.271092 0,577 L0,53 C0,23.7289083 23.7289083,0 53,0 L577,0 Z M479.5,285.89 C426.63,285.89 392.8,319.69 392.8,364.09 C392.8,411.808 420.615238,434.63146 462.622716,452.742599 L478.7,459.64 L483.441157,461.719734 C507.57404,472.359996 521.8,479.858 521.8,498.94 C521.8,515.88 506.13,528.14 481.6,528.14 C452.4,528.14 435.89,512.91 423.2,492.19 L375.09,520.14 C392.47,554.48 427.99,580.68 482.97,580.68 C539.2,580.68 581.07,551.48 581.07,498.18 C581.07,448.74 552.67,426.75 502.37,405.18 L487.57,398.84 L485.322788,397.859899 C461.5199,387.399087 451.17,380.1172 451.17,362.89 C451.17,348.52 462.16,337.52 479.5,337.52 C496.5,337.52 507.45,344.69 517.6,362.89 L563.7,333.29 C544.2,298.99 517.14,285.89 479.5,285.89 Z M343.09,289.27 L283.89,289.27 L283.89,490.57 C283.89,520.16 271.62,527.77 252.17,527.77 C231.83,527.77 223.37,513.82 214.07,497.32 L165.88,526.495 C179.84,556.04 207.29,580.57 254.69,580.57 C307.15,580.57 343.09,552.67 343.09,491.37 L343.09,289.27 Z"/>
+        </svg>
+    </div>
+
+    <!-- Controls section for user interaction -->
+    <div class="medium row">
+      <div>rotations: <span class="rotation-count">0</span></div>
+    </div>
+
+    <!-- Timer display section -->
+    <div class="large centered row">
+      <div class="half col">
+        <pre class="large log row">
+          <span class="label">current time</span>
+          <span class="value lcd">0</span>
+        </pre>
+      </div>
+      <div class="half col">
+        <pre class="large log row">
+          <span class="label">callback fired</span>
+          <span class="value lcd">0</span>
+        </pre>
+      </div>
+    </div>
+
+    <script type="module">
+        /*
+         * Import Anime.js v4 features
+         * Best Practice: Import only what you need to keep the bundle size small
+         * - animate: Main animation function
+         * - utils: Helper functions for DOM manipulation
+         * - createSpring: Creates spring-based easing functions
+         * - createDraggable: Creates draggable elements with physics
+         * - createTimer: Creates timer for scheduling callbacks
+         */
+        import { animate, utils, createSpring, createDraggable, createTimer } from 'https://cdn.jsdelivr.net/npm/animejs@4.0.0/+esm';
+
+        /*
+         * Timer Implementation
+         * Creates a timer that updates every second and loops infinitely
+         * Updates both the current time and callback count displays
+         */
+        const [ $time, $count ] = utils.$('.value');
+        createTimer({
+            duration: 1000,
+            loop: true,
+            frameRate: 30,
+            onUpdate: self => $time.innerHTML = self.currentTime,
+            onLoop: self => $count.innerHTML = self._currentIteration
+        });
+
+        /*
+         * DOM Element Selection
+         * Best Practice: Use utils.$ for consistent element selection
+         * The destructuring pattern [element] ensures we get the first matching element
+         */
+        const [ $logo ] = utils.$('.logo.js');
+        const [ $rotationCount ] = utils.$('.rotation-count');
+        let rotations = 0;
+
+        /*
+         * Continuous Bounce Animation
+         * Best Practice: Use keyframe arrays for complex animations
+         * - First keyframe scales up with cubic easing
+         * - Second keyframe uses spring physics for natural bounce
+         * - loop: true creates an infinite animation
+         * - loopDelay: adds pause between loops
+         */
+        // animate('.logo.js', {
+        //     scale: [
+        //         { to: 1.5, ease: 'inOut(3)', duration: 200 },
+        //         { to: 1, ease: createSpring({ stiffness: 300 }) }
+        //     ],
+        //     loop: true,
+        //     loopDelay: 500,
+        // });
+
+        /*
+         * Draggable Functionality
+         * Best Practice: Use createDraggable for interactive elements
+         * - container: [0, 0, 0, 0] defines drag boundaries (left, top, right, bottom)
+         * - releaseEase: Uses spring physics for natural release animation
+         */
+        createDraggable('.logo.js', {
+            container: [0, 0, 0, 0],
+            releaseEase: createSpring({ stiffness: 1000 })
+        });
+
+        /*
+         * Rotation Animation Function
+         * Best Practice: Keep animation logic in separate functions
+         * - Increments rotation counter
+         * - Updates button text
+         * - Animates rotation with easing
+         * - Uses out(4) easing for smooth deceleration
+         */
+        const rotateLogo = () => {
+            rotations++;
+            $rotationCount.innerText = rotations;
+            animate($logo, {
+                rotate: rotations * 360,
+                ease: 'out(4)',
+                duration: 1500,
+            });
+        }
+
+        // Event Listener
+        $logo.addEventListener('click', rotateLogo);
+    </script>
+</body>
+</html>

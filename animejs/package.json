@@ -1,0 +1,14 @@
+{
+  "name": "animejs",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "live-server"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "animejs": "^4.0.0"
+  }
+}
