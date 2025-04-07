@@ -11,6 +11,7 @@
     "type-check": "vue-tsc --build --force"
   },
   "dependencies": {
+    "@oku-ui/motion-nuxt": "^0.2.1",
     "vue": "^3.5.12"
   },
   "devDependencies": {
