@@ -1,0 +1,10 @@
+---
+description: 
+globs: animations.dev/**/*
+alwaysApply: false
+---
+
+- Use React.
+- Do not use Typescript.
+
+- I have a VueJS background. So explain your changes with comparison between VueJS and React.
